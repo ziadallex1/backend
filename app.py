@@ -2,7 +2,8 @@ from flask import Flask, jsonify, request
 import requests, time
 
 app = Flask(__name__)
-API_KEY = "YOUR_API_KEY"
+
+API_KEY = "0dabff120b09c5bf795801159af98b0032aa7d44ea04664f1ea311dd64ee08dc"
 HEADERS = {"x-apikey": API_KEY}
 SCAN_URL = "https://www.virustotal.com/api/v3/urls"
 
@@ -57,3 +58,4 @@ def scan_url():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
