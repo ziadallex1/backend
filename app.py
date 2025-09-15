@@ -1,84 +1,59 @@
 from flask import Flask, jsonify, request
-import requests
-import time
-
+import requests, time
 
 app = Flask(__name__)
-
-API_KEY = "0dabff120b09c5bf795801159af98b0032aa7d44ea04664f1ea311dd64ee08dc"
+API_KEY = "YOUR_API_KEY"
 HEADERS = {"x-apikey": API_KEY}
 SCAN_URL = "https://www.virustotal.com/api/v3/urls"
 
 def add_cors(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
 
-@app.route("/", methods=["GET", "POST"])
-def api_f():
-    if request.method == "OPTIONS":
-          return add_cors(jsonify({}))
+@app.route("/", methods=["GET"])
+def scan_url():
+    url = request.args.get("url")
+    if not url:
+        return add_cors(jsonify({"error": "No URL provided"})), 400
 
-    url_f = None
-
-    # جلب الرابط من GET أو POST
-    if request.method == "GET":
-        url_f = request.args.get("url")
-    elif request.method == "POST":
-        data_f = request.get_json()
-        if data_f:
-            url_f = data_f.get("url")
-
-    if not url_f:
-        return jsonify({"ERROR": "Not Found Url...."}), 400
-
-    # إرسال الرابط للتحليل
-    scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url_f})
+    # 1. إرسال اللينك
+    scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url})
     if scan_response.status_code != 200:
-        return jsonify({"ERROR": "The Link was not sent"}), 400
+        return add_cors(jsonify({"error": "Failed to submit URL"}))
+    
+    scan_id = scan_response.json()["data"]["id"]
 
-    scan_data = scan_response.json()
-    scan_id = scan_data["data"]["id"]
-    analysis_url = f"https://www.virustotal.com/api/v3/analyses/{scan_id}"
-
-    # انتظار انتهاء التحليل
-    while True:
-        analysis_response = requests.get(analysis_url, headers=HEADERS)
-        if analysis_response.status_code != 200:
-            return jsonify({"ERROR": "Error fetching analysis"}), 500
-
+    # 2. عمل polling للنتيجة (للديمو)
+    analysis_result = {}
+    for _ in range(10):  # نجرب 10 مرات مع تأخير
+        analysis_response = requests.get(f"https://www.virustotal.com/api/v3/analyses/{scan_id}", headers=HEADERS)
         analysis_result = analysis_response.json()
         status = analysis_result["data"]["attributes"]["status"]
-
         if status == "completed":
             break
-        time.sleep(2)  # انتظار ثانيتين قبل المحاولة التالية
+        time.sleep(2)  # انتظر ثانيتين قبل المحاولة التالية
 
-    stats = analysis_result["data"]["attributes"]["stats"]
-
+    stats = analysis_result["data"]["attributes"].get("stats", {"malicious":0,"harmless":0,"suspicious":0})
     malicious = stats["malicious"]
     harmless = stats["harmless"]
     suspicious = stats["suspicious"]
 
     if malicious > 0:
-        result_status = "The Link is Malicious"
+        status_text = "Malicious"
     elif suspicious > 0:
-        result_status = "The Link is Suspicious"
+        status_text = "Suspicious"
     else:
-        result_status = "The Link is Safe"
+        status_text = "Safe"
 
-    return jsonify({
-        "Plan": "Free",
-        "Status": result_status,
-        "Url": url_f,
-        "Detected as Safe": harmless,
+    result = {
+        "Url": url,
+        "Status": status_text,
         "Detected as Malicious": malicious,
+        "Detected as Safe": harmless,
         "Detected as Suspicious": suspicious
-    })
+    }
 
+    return add_cors(jsonify(result))
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
-
-
+    app.run(debug=True)
