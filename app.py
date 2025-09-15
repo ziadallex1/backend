@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request
 import requests
 import time
+from flask_cors import CORS
+CORS(app)
 
 app = Flask(__name__)
 
@@ -71,3 +73,4 @@ def api_f():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
