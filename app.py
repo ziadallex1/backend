@@ -1,62 +1,79 @@
-from flask import Flask , jsonify , request
-import requests 
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import requests
+import time
+import os
 
 app = Flask(__name__)
+CORS(app)  
 
-API_KEY = "0dabff120b09c5bf795801159af98b0032aa7d44ea04664f1ea311dd64ee08dc"
+API_KEY = os.environ.get("VT_API_KEY")
+if not API_KEY:
+    raise ValueError("Please set the VT_API_KEY environment variable!")
+
 HEADERS = {"x-apikey": API_KEY}
-SCAN_URL= "https://www.virustotal.com/api/v3/urls"
+SCAN_URL = "https://www.virustotal.com/api/v3/urls"
 
 
-@app.route("/" , methods=["GET" , "POST"])
+@app.route("/", methods=["GET", "POST"])
 def api_f():
     url_f = None
-    
+
+   
     if request.method == "GET":
         url_f = request.args.get("url")
-    if request.method == "POST": 
+    elif request.method == "POST":
         data_f = request.get_json()
         if data_f:
             url_f = data_f.get("url")
-    
+
     if not url_f:
-        return jsonify({"ERROR" : "Not Found Url...."}),400
-    
-    scan_response = requests.post(SCAN_URL , headers=HEADERS , data={"url" : url_f})
+        return jsonify({"ERROR": "Not Found Url...."}), 400
+
+ 
+    scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url_f})
     if scan_response.status_code != 200:
-        return jsonify({"ERROR" : "The Link was not sent"})
-      
+        return jsonify({"ERROR": "The Link was not sent"}), 400
+
     scan_data = scan_response.json()
     scan_id = scan_data["data"]["id"]
-    
     analysis_url = f"https://www.virustotal.com/api/v3/analyses/{scan_id}"
-    analysis_response = requests.get(analysis_url , headers=HEADERS)
+
     
-    analysis_result = analysis_response.json()
-    stats = analysis_result["data"]["attributes"]["stats"] 
-    
-    malicious = stats ["malicious"]
-    harmless = stats  ["harmless"]
-    suspicious = stats ["suspicious"]
-    
-    free = "Free"
-    
-    if malicious > 0 : 
-        status = "The  Link is Malicious"            
-    elif suspicious > 0 : 
-        status = "The Link is Suspicious"
-    else :
-        status = "The Link is Safe"
-    
+    while True:
+        analysis_response = requests.get(analysis_url, headers=HEADERS)
+        if analysis_response.status_code != 200:
+            return jsonify({"ERROR": "Error fetching analysis"}), 500
+
+        analysis_result = analysis_response.json()
+        status = analysis_result["data"]["attributes"]["status"]
+
+        if status == "completed":
+            break
+        time.sleep(2)  
+
+    stats = analysis_result["data"]["attributes"]["stats"]
+
+    malicious = stats["malicious"]
+    harmless = stats["harmless"]
+    suspicious = stats["suspicious"]
+
+    if malicious > 0:
+        result_status = "The Link is Malicious"
+    elif suspicious > 0:
+        result_status = "The Link is Suspicious"
+    else:
+        result_status = "The Link is Safe"
+
     return jsonify({
-        "This is the plan." :free ,
-        "Status " : status , 
-        "Url" : url_f , 
-        "Number of times detected as Safe " : harmless,
-        "Number of times detected  as malicious" : malicious,
-        "Number of times detected as suspicious" : suspicious
+        "Plan": "Free",
+        "Status": result_status,
+        "Url": url_f,
+        "Detected as Safe": harmless,
+        "Detected as Malicious": malicious,
+        "Detected as Suspicious": suspicious
     })
 
 
 if __name__ == "__main__":
-    app.run(debug=True , port=5000)
+    app.run(debug=True, port=5000)
