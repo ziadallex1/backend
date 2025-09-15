@@ -1,8 +1,7 @@
 from flask import Flask, jsonify, request
 import requests
 import time
-from flask_cors import CORS
-CORS(app)
+
 
 app = Flask(__name__)
 
@@ -10,9 +9,17 @@ API_KEY = "0dabff120b09c5bf795801159af98b0032aa7d44ea04664f1ea311dd64ee08dc"
 HEADERS = {"x-apikey": API_KEY}
 SCAN_URL = "https://www.virustotal.com/api/v3/urls"
 
+def add_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
 @app.route("/", methods=["GET", "POST"])
 def api_f():
+    if request.method == "OPTIONS":
+          return add_cors(jsonify({}))
+
     url_f = None
 
     # جلب الرابط من GET أو POST
@@ -73,4 +80,5 @@ def api_f():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
 
