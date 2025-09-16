@@ -7,7 +7,6 @@ API_KEY = "0dabff120b09c5bf795801159af98b0032aa7d44ea04664f1ea311dd64ee08dc"
 HEADERS = {"x-apikey": API_KEY}
 SCAN_URL = "https://www.virustotal.com/api/v3/urls"
 
-# إضافة CORS
 def add_cors(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     return response
@@ -16,28 +15,26 @@ def add_cors(response):
 def scan_url():
     url = request.args.get("url")
     if not url:
-        result = {"خطأ": "مفيش رابط مدخل"}
         return add_cors(Response(
-            json.dumps(result, ensure_ascii=False),
+            json.dumps({"خطأ": "من فضلك أدخل رابط"}, ensure_ascii=False, indent=4),
             content_type="application/json; charset=utf-8"
         )), 400
 
     # إرسال الرابط لفيروس توتال
     scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url})
     if scan_response.status_code != 200:
-        result = {"خطأ": "فشل في إرسال الرابط"}
         return add_cors(Response(
-            json.dumps(result, ensure_ascii=False),
+            json.dumps({"خطأ": "فشل إرسال الرابط"}, ensure_ascii=False, indent=4),
             content_type="application/json; charset=utf-8"
         ))
 
     scan_id = scan_response.json()["data"]["id"]
 
-    # متابعة النتيجة
+    # متابعة التحليل
     analysis_result = {}
     for _ in range(10):
         analysis_response = requests.get(
-            f"https://www.virustotal.com/api/v3/analyses/{scan_id}", 
+            f"https://www.virustotal.com/api/v3/analyses/{scan_id}",
             headers=HEADERS
         )
         analysis_result = analysis_response.json()
@@ -46,8 +43,9 @@ def scan_url():
             break
         time.sleep(2)
 
-    stats = analysis_result["data"]["attributes"]["stats"]
-
+    stats = analysis_result["data"]["attributes"].get(
+        "stats", {"malicious": 0, "harmless": 0, "suspicious": 0}
+    )
     malicious = stats["malicious"]
     harmless = stats["harmless"]
     suspicious = stats["suspicious"]
@@ -68,10 +66,9 @@ def scan_url():
     }
 
     return add_cors(Response(
-        json.dumps(result, ensure_ascii=False),
+        json.dumps(result, ensure_ascii=False, indent=4, sort_keys=False),
         content_type="application/json; charset=utf-8"
     ))
 
 if __name__ == "__main__":
     app.run(debug=True)
-
