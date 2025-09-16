@@ -20,7 +20,7 @@ def scan_url():
             content_type="application/json; charset=utf-8"
         )), 400
 
-    # إرسال الرابط لفيروس توتال
+    
     scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url})
     if scan_response.status_code != 200:
         return add_cors(Response(
@@ -30,7 +30,7 @@ def scan_url():
 
     scan_id = scan_response.json()["data"]["id"]
 
-    # متابعة التحليل
+    
     analysis_result = {}
     for _ in range(10):
         analysis_response = requests.get(
@@ -72,3 +72,4 @@ def scan_url():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
