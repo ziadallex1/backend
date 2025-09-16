@@ -1,5 +1,5 @@
-from flask import Flask, jsonify, request
-import requests, time
+from flask import Flask, request, Response
+import requests, time, json
 
 app = Flask(__name__)
 
@@ -7,6 +7,7 @@ API_KEY = "0dabff120b09c5bf795801159af98b0032aa7d44ea04664f1ea311dd64ee08dc"
 HEADERS = {"x-apikey": API_KEY}
 SCAN_URL = "https://www.virustotal.com/api/v3/urls"
 
+# إضافة CORS
 def add_cors(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     return response
@@ -15,47 +16,62 @@ def add_cors(response):
 def scan_url():
     url = request.args.get("url")
     if not url:
-        return add_cors(jsonify({"خطأ": "مفيش لينك"})), 400
+        result = {"خطأ": "مفيش رابط مدخل"}
+        return add_cors(Response(
+            json.dumps(result, ensure_ascii=False),
+            content_type="application/json; charset=utf-8"
+        )), 400
 
-    # ارسال الرابط للتحليل
+    # إرسال الرابط لفيروس توتال
     scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url})
     if scan_response.status_code != 200:
-        return add_cors(jsonify({"خطأ": "فشل في إرسال الرابط"}))
-    
+        result = {"خطأ": "فشل في إرسال الرابط"}
+        return add_cors(Response(
+            json.dumps(result, ensure_ascii=False),
+            content_type="application/json; charset=utf-8"
+        ))
+
     scan_id = scan_response.json()["data"]["id"]
 
-    # متابعة التحليل
+    # متابعة النتيجة
     analysis_result = {}
-    for _ in range(10):  
-        analysis_response = requests.get(f"https://www.virustotal.com/api/v3/analyses/{scan_id}", headers=HEADERS)
+    for _ in range(10):
+        analysis_response = requests.get(
+            f"https://www.virustotal.com/api/v3/analyses/{scan_id}", 
+            headers=HEADERS
+        )
         analysis_result = analysis_response.json()
         status = analysis_result["data"]["attributes"]["status"]
         if status == "completed":
             break
-        time.sleep(2)  
+        time.sleep(2)
 
-    # استخراج الإحصائيات
-    stats = analysis_result["data"]["attributes"]["stats"]
-    خبيث = stats["malicious"]
-    آمن = stats["harmless"]
-    مشبوه = stats["suspicious"]
-    name = "مرحبا مريم"
-    if خبيث > 0:
-        الحالة = "خبيث"
-    elif مشبوه > 0:
-        الحالة = "مشبوه"
+    stats = analysis_result["data"]["attributes"].get(
+        "stats", {"malicious":0, "harmless":0, "suspicious":0}
+    )
+    malicious = stats["malicious"]
+    harmless = stats["harmless"]
+    suspicious = stats["suspicious"]
+
+    if malicious > 0:
+        status_text = "خبيث"
+    elif suspicious > 0:
+        status_text = "مشبوه"
     else:
-        الحالة = "آمن"
+        status_text = "آمن"
 
-    النتيجة = {
+    result = {
+        "الحالة": status_text,
         "الرابط": url,
-        "الحالة": الحالة,
-        "تم اكتشافه كخبيث": خبيث,
-        "تم اكتشافه كآمن": آمن,
-        "تم اكتشافه كمشبوه": مشبوه
+        "تم اكتشافه كآمن": harmless,
+        "تم اكتشافه كخبيث": malicious,
+        "تم اكتشافه كمشبوه": suspicious
     }
 
-    return add_cors(jsonify(النتيجة))
+    return add_cors(Response(
+        json.dumps(result, ensure_ascii=False),
+        content_type="application/json; charset=utf-8"
+    ))
 
 if __name__ == "__main__":
     app.run(debug=True)
