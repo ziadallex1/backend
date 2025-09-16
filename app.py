@@ -15,16 +15,16 @@ def add_cors(response):
 def scan_url():
     url = request.args.get("url")
     if not url:
-        return add_cors(jsonify({"error": "No URL provided"})), 400
+        return add_cors(jsonify({"خطأ": "مفيش لينك"})), 400
 
-   
+    # ارسال الرابط للتحليل
     scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url})
     if scan_response.status_code != 200:
-        return add_cors(jsonify({"error": "Failed to submit URL"}))
+        return add_cors(jsonify({"خطأ": "فشل في إرسال الرابط"}))
     
     scan_id = scan_response.json()["data"]["id"]
 
-   
+    # متابعة التحليل
     analysis_result = {}
     for _ in range(10):  
         analysis_response = requests.get(f"https://www.virustotal.com/api/v3/analyses/{scan_id}", headers=HEADERS)
@@ -34,30 +34,28 @@ def scan_url():
             break
         time.sleep(2)  
 
-    stats = analysis_result["data"]["attributes"].get("stats", {"malicious":0,"harmless":0,"suspicious":0})
-    malicious = stats["malicious"]
-    harmless = stats["harmless"]
-    suspicious = stats["suspicious"]
-
-    if malicious > 0:
-        status_text = "Malicious"
-    elif suspicious > 0:
-        status_text = "Suspicious"
+    # استخراج الإحصائيات
+    stats = analysis_result["data"]["attributes"]["stats"]
+    خبيث = stats["malicious"]
+    آمن = stats["harmless"]
+    مشبوه = stats["suspicious"]
+    name = "مرحبا مريم"
+    if خبيث > 0:
+        الحالة = "خبيث"
+    elif مشبوه > 0:
+        الحالة = "مشبوه"
     else:
-        status_text = "Safe"
-    free = "hello y mariem"
-    result = {
-        "plan" : free,
-        "Url": url,
-        "Status": status_text,
-        "Detected as Malicious": malicious,
-        "Detected as Safe": harmless,
-        "Detected as Suspicious": suspicious
+        الحالة = "آمن"
+
+    النتيجة = {
+        "الرابط": url,
+        "الحالة": الحالة,
+        "تم اكتشافه كخبيث": خبيث,
+        "تم اكتشافه كآمن": آمن,
+        "تم اكتشافه كمشبوه": مشبوه
     }
 
-    return add_cors(jsonify(result))
+    return add_cors(jsonify(النتيجة))
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
