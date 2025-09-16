@@ -46,9 +46,8 @@ def scan_url():
             break
         time.sleep(2)
 
-    stats = analysis_result["data"]["attributes"].get(
-        "stats", {"malicious":0, "harmless":0, "suspicious":0}
-    )
+    stats = analysis_result["data"]["attributes"]["stats"]
+
     malicious = stats["malicious"]
     harmless = stats["harmless"]
     suspicious = stats["suspicious"]
@@ -75,3 +74,4 @@ def scan_url():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
