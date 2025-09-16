@@ -17,22 +17,22 @@ def scan_url():
     if not url:
         return add_cors(jsonify({"error": "No URL provided"})), 400
 
-    # 1. إرسال اللينك
+   
     scan_response = requests.post(SCAN_URL, headers=HEADERS, data={"url": url})
     if scan_response.status_code != 200:
         return add_cors(jsonify({"error": "Failed to submit URL"}))
     
     scan_id = scan_response.json()["data"]["id"]
 
-    # 2. عمل polling للنتيجة (للديمو)
+   
     analysis_result = {}
-    for _ in range(10):  # نجرب 10 مرات مع تأخير
+    for _ in range(10):  
         analysis_response = requests.get(f"https://www.virustotal.com/api/v3/analyses/{scan_id}", headers=HEADERS)
         analysis_result = analysis_response.json()
         status = analysis_result["data"]["attributes"]["status"]
         if status == "completed":
             break
-        time.sleep(2)  # انتظر ثانيتين قبل المحاولة التالية
+        time.sleep(2)  
 
     stats = analysis_result["data"]["attributes"].get("stats", {"malicious":0,"harmless":0,"suspicious":0})
     malicious = stats["malicious"]
@@ -45,8 +45,9 @@ def scan_url():
         status_text = "Suspicious"
     else:
         status_text = "Safe"
-
+    free = "hello y mariem"
     result = {
+        "plan" : free,
         "Url": url,
         "Status": status_text,
         "Detected as Malicious": malicious,
@@ -58,4 +59,5 @@ def scan_url():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
 
