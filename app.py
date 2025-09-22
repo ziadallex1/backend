@@ -52,11 +52,12 @@ def scan_url():
 
     if malicious > 0:
         status_text = "خبيث"
+        
     elif suspicious > 0:
         status_text = "مشبوه"
     else:
         status_text = "آمن"
-
+ 
     r = None    
     if status_text == "خبيث":   
         r =  "الرابط ده بيحاول ينزّل ملف ضار على جهازك. متحمّلوش نهائيًا عشان ماتتعرضش للاختراق أو الفيروسات."
@@ -71,7 +72,7 @@ def scan_url():
         "تم اكتشافه كآمن": harmless,
         "تم اكتشافه كخبيث": malicious,
         "تم اكتشافه كمشبوه": suspicious,
-        "توعية" : r
+        "التوعية" : r
     }
 
     return add_cors(Response(
