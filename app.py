@@ -65,14 +65,15 @@ def scan_url():
         r = "الرابط ده مشبوه وممكن يكون في محاولة نصب أو اختراق. متفتحوش غير لو متأكد من المصدر."
     elif status_text == "آمن":
         r = "الرابط ده آمن ومفيهوش خطر ظاهر، بس خليك دايمًا حريص وماتدخلش بياناتك الشخصية إلا في مواقع موثوق فيها."
-        
+    f = "ziad ramzy" 
     result = {
         "الحالة": status_text,
         "الرابط": url,
         "تم اكتشافه كآمن": harmless,
         "تم اكتشافه كخبيث": malicious,
         "تم اكتشافه كمشبوه": suspicious,
-        "التوعية" : r
+        "التوعية" : r , 
+        "name" : f
     }
 
     return add_cors(Response(
@@ -82,6 +83,7 @@ def scan_url():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
 
 
 
